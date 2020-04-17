@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="cword.css" />
+    <script src="cword.js"></script>
+    <title>生字練習簿</title>
+  </head>
+  <body>
+    <header class="fixed-top no-print">
+      <div class="collapse bg-dark" id="navbarHeader">
+        <div class="container">
+          <div class="row">
+            <div class="col-sm-8 col-md-7 py-4">
+              <h4 class="text-white">關於</h4>
+              <p class="text-muted">一個旅外家長自娛的虐兒工具</p>
+            </div>
+            <div class="col-sm-4 offset-md-1 py-4">
+              <h4 class="text-white">設定</h4>
+              <ul class="list-unstyled">
+                <li>
+                  <div class="form-group">
+                    <label class="text-white" for="wordsPerPage"
+                      >每頁字數</label
+                    >
+                    <select class="form-control" id="wordsPerPage">
+                      <option>1</option>
+                      <option>2</option>
+                      <option>3</option>
+                      <option>4</option>
+                      <option>5</option>
+                      <option>6</option>
+                      <option>7</option>
+                      <option>8</option>
+                      <option>9</option>
+                      <option>10</option>
+                      <option>11</option>
+                      <option>12</option>
+                    </select>
+                  </div>
+                </li>
+                <li>
+                  <div class="form-check">
+                    <input
+                      id="left2right"
+                      class="form-check-input"
+                      type="checkbox"
+                    />
+                    <label class="form-check-label text-white" for="left2right">
+                      由左至右排
+                    </label>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav class="navbar navbar-dark bg-dark flex-md-nowrap shadow">
+        <span class="navbar-brand col-sm-3 col-md-2 mr-0">
+          <svg
+            class="bi bi-pencil"
+            width="1em"
+            height="1em"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M11.293 1.293a1 1 0 011.414 0l2 2a1 1 0 010 1.414l-9 9a1 1 0 01-.39.242l-3 1a1 1 0 01-1.266-1.265l1-3a1 1 0 01.242-.391l9-9zM12 2l2 2-9 9-3 1 1-3 9-9z"
+              clip-rule="evenodd"
+            />
+            <path
+              fill-rule="evenodd"
+              d="M12.146 6.354l-2.5-2.5.708-.708 2.5 2.5-.707.708zM3 10v.5a.5.5 0 00.5.5H4v.5a.5.5 0 00.5.5H5v.5a.5.5 0 00.5.5H6v-1.5a.5.5 0 00-.5-.5H5v-.5a.5.5 0 00-.5-.5H3z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <strong>生字練習簿產生器</strong>
+        </span>
+
+        <input
+          id="words"
+          class="form-control form-control-dark w-100"
+          type="text"
+          placeholder="請輸入想列印的生字"
+          aria-label="words"
+        />
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#navbarHeader"
+          aria-controls="navbarHeader"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <div id="board"></div>
+    </main>
+
+    <footer class="no-print">
+      <div class="watermark">
+        本網頁生字圖檔取自<a href="https://eword.ntpc.edu.tw/"
+          >新北市政府教育局</a
+        >網站
+      </div>
+    </footer>
+    <script
+      src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+      integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+      integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+      integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
