@@ -1,11 +1,27 @@
+"use strict";
+
 function createWord(word) {
   const url = word
     ? `https://eword.ntpc.edu.tw/char/${word}.jpg`
     : "https://eword.ntpc.edu.tw/刊頭.jpg";
-  const img = document.createElement("img");
-  img.src = url;
 
-  return img;
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      const context = canvas.getContext("2d");
+      context.drawImage(img, 0, 0);
+
+      resolve(canvas);
+    };
+    img.onerror = (err) => {
+      reject(err);
+    };
+    img.src = url;
+  });
 }
 
 function createPage(words, reverse) {
@@ -15,10 +31,19 @@ function createPage(words, reverse) {
     page.classList.add("flex-row-reverse");
   }
 
-  page.appendChild(createWord());
+  let wordsPromises = [createWord()];
   for (const w of words) {
-    page.append(createWord(w));
+    wordsPromises.push(createWord(w));
   }
+  Promise.allSettled(wordsPromises).then((results) => {
+    results.forEach((result) => {
+      if (result.status === "fulfilled") {
+        page.appendChild(result.value);
+      } else {
+        console.error(`${result.reason.type}: ${result.reason.target.src}`);
+      }
+    });
+  });
 
   return page;
 }
