@@ -14,6 +14,9 @@ Thumbs.db
 # === Local-only files ===
 *.local.md
 
+# === Node.js ===
+node_modules/
+
 # === Jekyll (legacy, kept for safety) ===
 _site/
 .sass-cache/

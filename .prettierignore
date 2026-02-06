@@ -1,0 +1,9 @@
+# Angular compiled output (hashed filenames, do not format)
+main.*.js
+runtime.*.js
+polyfills.*.js
+scripts.*.js
+styles.*.css
+
+# Other
+node_modules/

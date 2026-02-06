@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "devDependencies": {
+    "husky": "^9",
+    "lint-staged": "^15",
+    "prettier": "^3"
+  },
+  "lint-staged": {
+    "*.{js,html,css,json,yaml,yml,md}": "prettier --write"
+  },
+  "scripts": {
+    "prepare": "husky"
+  }
+}
