@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Card Reader Converter</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding: 50px;
+        text-align: center;
+        background: #f0f2f5;
+        user-select: none; /* Prevent accidental text selection */
+      }
+
+      /* Screen-reader only class for accessible labels */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      h2 {
+        color: #333;
+        margin-bottom: 30px;
+      }
+
+      input {
+        padding: 15px;
+        font-size: 24px;
+        max-width: 320px;
+        width: 90%;
+        text-align: center;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: border-color 0.3s;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #0078d4;
+      }
+
+      /* Container for the result display */
+      .result-container {
+        margin-top: 30px;
+        font-size: 48px; /* Large font for easy reading */
+        font-family: Consolas, "Courier New", monospace;
+        color: #333;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+      }
+
+      /* Styles for the clickable number parts */
+      .number-part {
+        padding: 5px 15px;
+        background: white;
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        color: #0078d4;
+        cursor: pointer; /* Hand cursor to indicate clickable */
+        transition: all 0.2s;
+      }
+
+      .number-part:hover {
+        background-color: #eef6fc;
+        border-color: #0078d4;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .number-part:active {
+        transform: translateY(0);
+        background-color: #ddeeff;
+      }
+
+      /* Placeholder state: dims the text, removes interactive hover effects */
+      .number-part.placeholder {
+        color: #ccc;
+        cursor: default;
+      }
+
+      .number-part.placeholder:hover {
+        background-color: white;
+        border-color: #e0e0e0;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .number-part.placeholder:active {
+        transform: none;
+        background-color: white;
+      }
+
+      .separator {
+        color: #999;
+        font-weight: bold;
+      }
+
+      .hint {
+        color: #666;
+        margin-top: 25px;
+        font-size: 14px;
+      }
+
+      /* Status message toast style */
+      .status-msg {
+        margin-top: 15px;
+        height: 24px; /* Fixed height to prevent layout jump */
+        font-weight: bold;
+        color: green;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .status-msg.error {
+        color: #d32f2f;
+      }
+
+      /* History Section */
+      .history-section {
+        max-width: 500px;
+        margin: 30px auto 0;
+        text-align: left;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e0e0e0;
+        background: #fafafa;
+      }
+
+      .history-header span {
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .history-header button {
+        font-size: 12px;
+        padding: 4px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: white;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .history-header button:hover {
+        background: #f0f0f0;
+        border-color: #999;
+      }
+
+      .history-list {
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .history-entry {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 16px;
+        font-size: 13px;
+        color: #555;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background-color 0.15s;
+      }
+
+      .history-entry:last-child {
+        border-bottom: none;
+      }
+
+      .history-entry:hover {
+        background-color: #f5f8fc;
+      }
+
+      .history-entry .entry-time {
+        color: #999;
+        font-size: 12px;
+        margin-right: 12px;
+        flex-shrink: 0;
+      }
+
+      .history-entry .entry-result {
+        font-family: Consolas, "Courier New", monospace;
+        color: #0078d4;
+        flex-shrink: 0;
+      }
+
+      .history-entry .entry-original {
+        color: #999;
+        font-size: 12px;
+        margin-left: 12px;
+        flex-shrink: 0;
+      }
+
+      .history-empty {
+        padding: 16px;
+        text-align: center;
+        color: #bbb;
+        font-size: 13px;
+      }
+
+      /* Version Info Footer */
+      .footer {
+        position: fixed;
+        bottom: 10px;
+        right: 15px;
+        font-size: 12px;
+        color: #aaa;
+      }
+
+      /* Responsive: mobile adjustments */
+      @media (max-width: 600px) {
+        body {
+          padding: 20px;
+        }
+
+        .result-container {
+          font-size: 32px;
+        }
+
+        .number-part {
+          padding: 4px 10px;
+        }
+
+        .history-section {
+          margin-top: 20px;
+        }
+
+        .history-entry {
+          font-size: 12px;
+          padding: 6px 12px;
+          flex-wrap: wrap;
+          gap: 2px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h2>讀卡機格式轉換器</h2>
+
+    <label for="cardInput" class="sr-only">卡號輸入欄位</label>
+    <input type="text" id="cardInput" placeholder="點擊此處並刷卡" autofocus />
+
+    <div class="result-container">
+      <span
+        id="displayHigh"
+        class="number-part placeholder"
+        title="Click to copy High Word"
+        >-----</span
+      >
+      <span class="separator">:</span>
+      <span
+        id="displayLow"
+        class="number-part placeholder"
+        title="Click to copy Low Word"
+        >-----</span
+      >
+    </div>
+
+    <div id="statusMsg" class="status-msg">已複製!</div>
+
+    <div class="hint">刷卡後，點擊上方數字即可分別複製</div>
+
+    <div class="history-section">
+      <div class="history-header">
+        <span>刷卡紀錄</span>
+        <button id="clearHistoryBtn">清除紀錄</button>
+      </div>
+      <div id="historyList" class="history-list">
+        <div class="history-empty">尚無紀錄</div>
+      </div>
+    </div>
+
+    <div class="footer">Ver: 1.0.0 | 2026-02-06</div>
+
+    <script>
+      // DOM Elements
+      const input = document.getElementById("cardInput");
+      const displayHigh = document.getElementById("displayHigh");
+      const displayLow = document.getElementById("displayLow");
+      const statusMsg = document.getElementById("statusMsg");
+      const historyList = document.getElementById("historyList");
+      const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+      // State
+      let hasResult = false;
+      let statusTimeout = null;
+      const HISTORY_KEY = "cardReaderHistory";
+      const MAX_HISTORY = 100;
+
+      // Load history from localStorage on page load
+      let history = loadHistory();
+      renderHistory();
+
+      // Event Listener: Handle card input (Enter key)
+      input.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+          processCard(this.value);
+          this.value = ""; // Clear input for next swipe
+        }
+      });
+
+      // Event Listener: Copy High Word
+      displayHigh.addEventListener("click", function () {
+        if (!hasResult) return;
+        copyToClipboard(this.innerText);
+      });
+
+      // Event Listener: Copy Low Word
+      displayLow.addEventListener("click", function () {
+        if (!hasResult) return;
+        copyToClipboard(this.innerText);
+      });
+
+      // Event Listener: Clear history
+      clearHistoryBtn.addEventListener("click", function () {
+        history = [];
+        saveHistory();
+        renderHistory();
+      });
+
+      /**
+       * Process the card number input
+       * Converts 32-bit integer to two 16-bit integers with padding
+       * @param {string} val - The raw card input string
+       */
+      function processCard(val) {
+        // Parse input to integer
+        const num = parseInt(val, 10);
+
+        // Validation: Ensure it's a number
+        if (isNaN(num)) {
+          showStatus("輸入無效", "error");
+          input.focus();
+          return;
+        }
+
+        // Validation: Ensure value is within 32-bit unsigned range
+        if (num < 0 || num > 4294967295) {
+          showStatus("數值超出範圍", "error");
+          input.focus();
+          return;
+        }
+
+        // Calculate High and Low words (16-bit)
+        const high = Math.floor(num / 65536);
+        const low = num % 65536;
+
+        // Format with 5-digit zero padding
+        const highStr = high.toString().padStart(5, "0");
+        const lowStr = low.toString().padStart(5, "0");
+
+        // Update the display
+        displayResult(highStr, lowStr);
+
+        // Add to history
+        const now = new Date();
+        const timestamp = now.toTimeString().slice(0, 8); // HH:MM:SS
+        const entry = {
+          cardNumber: num,
+          high: highStr,
+          low: lowStr,
+          timestamp: timestamp,
+        };
+        history.push(entry);
+        if (history.length > MAX_HISTORY) {
+          history.shift();
+        }
+        saveHistory();
+        renderHistory();
+
+        // Refocus input after processing (soft refocus approach)
+        input.focus();
+      }
+
+      /**
+       * Update the main display with result values
+       * @param {string} highStr - Formatted high word
+       * @param {string} lowStr - Formatted low word
+       */
+      function displayResult(highStr, lowStr) {
+        hasResult = true;
+        displayHigh.innerText = highStr;
+        displayLow.innerText = lowStr;
+        displayHigh.classList.remove("placeholder");
+        displayLow.classList.remove("placeholder");
+      }
+
+      /**
+       * Copy text to system clipboard and show feedback
+       * @param {string} text - Text to copy
+       */
+      function copyToClipboard(text) {
+        // Use standard Clipboard API
+        navigator.clipboard
+          .writeText(text)
+          .then(function () {
+            showStatus("已複製: " + text, "success");
+          })
+          .catch(function (err) {
+            // Fallback for older browsers or restricted contexts
+            fallbackCopy(text);
+          });
+      }
+
+      /**
+       * Fallback copy method using temporary textarea
+       * Note: document.execCommand('copy') is deprecated but kept as a
+       * fallback for older browsers that do not support the Clipboard API.
+       * @param {string} text - Text to copy
+       */
+      function fallbackCopy(text) {
+        var textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          // execCommand('copy') is deprecated but retained for compatibility
+          document.execCommand("copy");
+          showStatus("已複製: " + text, "success");
+        } catch (err) {
+          showStatus("複製失敗", "error");
+        }
+        document.body.removeChild(textArea);
+      }
+
+      /**
+       * Display a temporary status message
+       * @param {string} msg - Message to display
+       * @param {string} type - 'success' or 'error'
+       */
+      function showStatus(msg, type) {
+        // Clear any existing timeout to prevent flickering
+        if (statusTimeout !== null) {
+          clearTimeout(statusTimeout);
+        }
+
+        statusMsg.innerText = msg;
+        statusMsg.classList.remove("error");
+        if (type === "error") {
+          statusMsg.classList.add("error");
+        }
+        statusMsg.style.opacity = "1";
+
+        // Hide after 1.5 seconds
+        statusTimeout = setTimeout(function () {
+          statusMsg.style.opacity = "0";
+          statusTimeout = null;
+        }, 1500);
+      }
+
+      /**
+       * Load history from localStorage
+       * @returns {Array} Array of history entry objects
+       */
+      function loadHistory() {
+        try {
+          var data = localStorage.getItem(HISTORY_KEY);
+          if (data) {
+            var parsed = JSON.parse(data);
+            if (Array.isArray(parsed)) {
+              return parsed;
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors, start fresh
+        }
+        return [];
+      }
+
+      /**
+       * Save history to localStorage
+       */
+      function saveHistory() {
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        } catch (e) {
+          // Ignore storage errors (e.g., quota exceeded)
+        }
+      }
+
+      /**
+       * Render the history list in the DOM
+       */
+      function renderHistory() {
+        // Clear all child nodes safely (no innerHTML)
+        while (historyList.firstChild) {
+          historyList.removeChild(historyList.firstChild);
+        }
+
+        if (history.length === 0) {
+          var emptyMsg = document.createElement("div");
+          emptyMsg.className = "history-empty";
+          emptyMsg.textContent = "尚無紀錄";
+          historyList.appendChild(emptyMsg);
+          return;
+        }
+
+        // Render newest first
+        for (var i = history.length - 1; i >= 0; i--) {
+          var entry = history[i];
+          var div = document.createElement("div");
+          div.className = "history-entry";
+
+          var timeSpan = document.createElement("span");
+          timeSpan.className = "entry-time";
+          timeSpan.textContent = entry.timestamp;
+
+          var resultSpan = document.createElement("span");
+          resultSpan.className = "entry-result";
+          resultSpan.textContent = entry.high + ":" + entry.low;
+
+          var originalSpan = document.createElement("span");
+          originalSpan.className = "entry-original";
+          originalSpan.textContent = "#" + entry.cardNumber;
+
+          div.appendChild(timeSpan);
+          div.appendChild(resultSpan);
+          div.appendChild(originalSpan);
+
+          // Click to re-display this result
+          div.addEventListener(
+            "click",
+            (function (e) {
+              return function () {
+                displayResult(e.high, e.low);
+              };
+            })(entry),
+          );
+
+          historyList.appendChild(div);
+        }
+      }
+    </script>
+  </body>
+</html>
