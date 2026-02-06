@@ -1,3 +1,20 @@
+# === OS artifacts ===
+.DS_Store
+Thumbs.db
+
+# === Editor / IDE ===
+.vscode/
+.idea/
+*.swp
+*~
+
+# === Claude Code ===
+.claude/
+
+# === Local-only files ===
+*.local.md
+
+# === Jekyll (legacy, kept for safety) ===
 _site/
 .sass-cache/
 .jekyll-metadata
