@@ -2,8 +2,610 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>xeon.tw</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>xeon.tw</title>
+    <meta
+      name="description"
+      content="xeon.tw — experimental web tools by xeon"
+    />
+    <style>
+      /* ── Design Tokens ────────────────────────── */
+      :root {
+        --bg: #0a0e14;
+        --text: #b3b1ad;
+        --prompt: #7fd962;
+        --link: #39bae6;
+        --greeting: #ffb454;
+        --dimmed: #555;
+        --cursor-color: #7fd962;
+        --glow: rgba(127, 217, 98, 0.12);
+        --scanline: rgba(127, 217, 98, 0.03);
+        --font-mono:
+          "SF Mono", "Fira Code", "Cascadia Code", Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        --max-width: 720px;
+        --char-delay: 45;
+        --line-delay: 300;
+        --blank-delay: 500;
+      }
+
+      /* ── Reset & Base ─────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 16px;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      /* ── Terminal Container ───────────────────── */
+      #terminal {
+        width: 100%;
+        max-width: var(--max-width);
+        position: relative;
+      }
+
+      /* ── Scanline Overlay ─────────────────────── */
+      #terminal::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          var(--scanline) 2px,
+          var(--scanline) 4px
+        );
+        pointer-events: none;
+        z-index: 999;
+      }
+
+      /* ── Line Styles ──────────────────────────── */
+      .line {
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 1.7em;
+        text-shadow: 0 0 8px var(--glow);
+      }
+
+      .line-blank {
+        min-height: 1.7em;
+      }
+
+      /* ── Prompt ────────────────────────────────── */
+      .prompt {
+        color: var(--prompt);
+        user-select: none;
+      }
+
+      /* ── Greeting Color ────────────────────────── */
+      .greeting {
+        color: var(--greeting);
+      }
+
+      /* ── Comment ───────────────────────────────── */
+      .comment {
+        color: var(--dimmed);
+      }
+
+      /* ── Links ─────────────────────────────────── */
+      .line a {
+        color: var(--link);
+        text-decoration: none;
+        pointer-events: none;
+        opacity: 0.5;
+        transition:
+          opacity 0.3s,
+          outline-color 0.2s;
+      }
+
+      .line a.active {
+        pointer-events: auto;
+        opacity: 1;
+      }
+
+      .line a:hover {
+        text-decoration: underline;
+      }
+
+      .line a:focus-visible {
+        outline: 2px solid var(--link);
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+
+      /* ── Dimmed Text ───────────────────────────── */
+      .dimmed {
+        color: var(--dimmed);
+      }
+
+      /* ── Cursor ────────────────────────────────── */
+      .cursor {
+        display: inline-block;
+        width: 0.6em;
+        height: 1.15em;
+        background: var(--cursor-color);
+        vertical-align: text-bottom;
+        animation: blink 1s step-end infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* ── Skip Hint ─────────────────────────────── */
+      #skip-hint {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        color: var(--dimmed);
+        font-size: 0.75rem;
+        opacity: 0;
+        transition: opacity 0.5s;
+        pointer-events: none;
+      }
+
+      #skip-hint.visible {
+        opacity: 1;
+      }
+
+      /* ── Language Toggle ────────────────────────── */
+      #lang-toggle {
+        position: fixed;
+        top: 1rem;
+        right: 1.5rem;
+        background: transparent;
+        border: 1px solid var(--dimmed);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        padding: 0.3rem 0.7rem;
+        cursor: pointer;
+        border-radius: 3px;
+        transition:
+          border-color 0.2s,
+          color 0.2s;
+        z-index: 1000;
+      }
+
+      #lang-toggle:hover {
+        border-color: var(--text);
+        color: #fff;
+      }
+
+      #lang-toggle:focus-visible {
+        outline: 2px solid var(--link);
+        outline-offset: 2px;
+      }
+
+      /* ── Reduced Motion ────────────────────────── */
+      @media (prefers-reduced-motion: reduce) {
+        .cursor {
+          animation: none;
+          opacity: 0.7;
+        }
+      }
+
+      /* ── RWD: Tablet / Mobile ──────────────────── */
+      @media (max-width: 600px) {
+        html {
+          font-size: 14px;
+        }
+
+        body {
+          justify-content: flex-start;
+          padding: 3rem 1.25rem 1.25rem;
+        }
+      }
+
+      @media (max-width: 360px) {
+        html {
+          font-size: 13px;
+        }
+      }
+    </style>
   </head>
-  <body></body>
+  <body>
+    <button id="lang-toggle" type="button" aria-label="Switch language">
+      ZH
+    </button>
+    <main id="terminal" aria-live="polite"></main>
+    <div id="skip-hint"></div>
+
+    <script>
+      // ── i18n Content ──────────────────────────────
+      const CONTENT = {
+        en: {
+          skipHint: "Press any key or click to skip",
+          langLabel: "切換至中文",
+          langText: "ZH",
+          lines: [
+            {
+              prompt: "$ ",
+              text: "Hello, I'm xeon.",
+              cls: "greeting",
+            },
+            {
+              prompt: "$ ",
+              text: "A developer who builds experimental web tools.",
+            },
+            { blank: true },
+            {
+              prompt: "$ ",
+              text: "// experiments",
+              cls: "comment",
+            },
+            {
+              prompt: "> ",
+              text: "Coming soon...",
+              cls: "dimmed",
+            },
+          ],
+        },
+        zh: {
+          skipHint: "按任意鍵或點擊以跳過",
+          langLabel: "Switch to English",
+          langText: "EN",
+          lines: [
+            {
+              prompt: "$ ",
+              text: "Hi, 我是 xeon。",
+              cls: "greeting",
+            },
+            {
+              prompt: "$ ",
+              text: "一個喜歡做實驗性網頁工具的開發者。",
+            },
+            { blank: true },
+            {
+              prompt: "$ ",
+              text: "// 實驗作品",
+              cls: "comment",
+            },
+            {
+              prompt: "> ",
+              text: "即將推出...",
+              cls: "dimmed",
+            },
+          ],
+        },
+      };
+
+      // ── State ─────────────────────────────────────
+      const STORAGE_KEY = "xeon-lang";
+      let currentLang = detectLanguage();
+      let isAnimating = false;
+      let animationDone = false;
+      let abortController = null;
+
+      // ── DOM References ────────────────────────────
+      const terminal = document.getElementById("terminal");
+      const skipHint = document.getElementById("skip-hint");
+      const langToggle = document.getElementById("lang-toggle");
+
+      // ── Language Detection ────────────────────────
+      function detectLanguage() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored === "en" || stored === "zh") return stored;
+        const nav = navigator.languages || [navigator.language || "en"];
+        return nav.some((l) => l.startsWith("zh")) ? "zh" : "en";
+      }
+
+      function setLanguage(lang) {
+        currentLang = lang;
+        localStorage.setItem(STORAGE_KEY, lang);
+        document.documentElement.lang = lang === "zh" ? "zh-TW" : "en";
+        const content = CONTENT[lang];
+        langToggle.textContent = content.langText;
+        langToggle.setAttribute("aria-label", content.langLabel);
+        skipHint.textContent = content.skipHint;
+      }
+
+      // ── DOM Helpers ───────────────────────────────
+      function clearTerminal() {
+        while (terminal.firstChild) {
+          terminal.removeChild(terminal.firstChild);
+        }
+      }
+
+      function createLineElement(lineDef) {
+        const div = document.createElement("div");
+
+        if (lineDef.blank) {
+          div.className = "line-blank";
+          div.setAttribute("aria-hidden", "true");
+          return div;
+        }
+
+        div.className = "line";
+        div.setAttribute("aria-hidden", "true");
+
+        if (lineDef.prompt) {
+          const promptSpan = document.createElement("span");
+          promptSpan.className = "prompt";
+          promptSpan.textContent = lineDef.prompt;
+          div.appendChild(promptSpan);
+        }
+
+        const textContainer = document.createElement("span");
+        textContainer.className = "line-text";
+        div.appendChild(textContainer);
+
+        return div;
+      }
+
+      function getCharacterSequence(lineDef) {
+        if (lineDef.blank) return [];
+        if (lineDef.segments) {
+          const chars = [];
+          for (const seg of lineDef.segments) {
+            for (const ch of seg.text) {
+              chars.push({ ch, cls: seg.cls || "", href: seg.href || "" });
+            }
+          }
+          return chars;
+        }
+        return Array.from(lineDef.text || "").map((ch) => ({
+          ch,
+          cls: lineDef.cls || "",
+          href: "",
+        }));
+      }
+
+      // ── Render Completed State ────────────────────
+      function renderComplete(lang) {
+        clearTerminal();
+        const content = CONTENT[lang];
+        for (const lineDef of content.lines) {
+          const div = createLineElement(lineDef);
+          if (!lineDef.blank) {
+            const textContainer = div.querySelector(".line-text");
+            if (lineDef.segments) {
+              for (const seg of lineDef.segments) {
+                if (seg.href) {
+                  const a = document.createElement("a");
+                  a.href = seg.href;
+                  a.textContent = seg.text;
+                  a.className = "active";
+                  textContainer.appendChild(a);
+                } else {
+                  const span = document.createElement("span");
+                  if (seg.cls) span.className = seg.cls;
+                  span.textContent = seg.text;
+                  textContainer.appendChild(span);
+                }
+              }
+            } else {
+              const span = document.createElement("span");
+              if (lineDef.cls) span.className = lineDef.cls;
+              span.textContent = lineDef.text;
+              textContainer.appendChild(span);
+            }
+            div.removeAttribute("aria-hidden");
+          }
+          terminal.appendChild(div);
+        }
+        animationDone = true;
+        skipHint.classList.remove("visible");
+      }
+
+      // ── Typewriter Engine ─────────────────────────
+      function sleep(ms, signal) {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, ms);
+          if (signal) {
+            signal.addEventListener(
+              "abort",
+              () => {
+                clearTimeout(timer);
+                reject(new DOMException("Aborted", "AbortError"));
+              },
+              { once: true },
+            );
+          }
+        });
+      }
+
+      async function runTypewriter(lang) {
+        if (isAnimating) {
+          if (abortController) abortController.abort();
+          await new Promise((r) => setTimeout(r, 50));
+        }
+
+        isAnimating = true;
+        animationDone = false;
+        abortController = new AbortController();
+        const signal = abortController.signal;
+
+        clearTerminal();
+        setLanguage(lang);
+        const content = CONTENT[lang];
+
+        // Check reduced motion preference
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          renderComplete(lang);
+          isAnimating = false;
+          return;
+        }
+
+        skipHint.classList.add("visible");
+
+        try {
+          for (let i = 0; i < content.lines.length; i++) {
+            const lineDef = content.lines[i];
+
+            if (lineDef.blank) {
+              const blankDiv = document.createElement("div");
+              blankDiv.className = "line-blank";
+              blankDiv.setAttribute("aria-hidden", "true");
+              terminal.appendChild(blankDiv);
+              await sleep(
+                parseInt(
+                  getComputedStyle(document.documentElement).getPropertyValue(
+                    "--blank-delay",
+                  ),
+                ) || 500,
+                signal,
+              );
+              continue;
+            }
+
+            const div = createLineElement(lineDef);
+            const textContainer = div.querySelector(".line-text");
+
+            // Add cursor to this line
+            const cursor = document.createElement("span");
+            cursor.className = "cursor";
+            cursor.setAttribute("aria-hidden", "true");
+
+            terminal.appendChild(div);
+            div.appendChild(cursor);
+
+            const chars = getCharacterSequence(lineDef);
+
+            // Track current segment for link building
+            let currentAnchor = null;
+            let currentSpan = null;
+            let prevCls = "";
+            let prevHref = "";
+
+            for (const { ch, cls, href } of chars) {
+              // New segment if class or href changed
+              if (cls !== prevCls || href !== prevHref) {
+                if (href) {
+                  currentAnchor = document.createElement("a");
+                  currentAnchor.href = href;
+                  textContainer.appendChild(currentAnchor);
+                  currentSpan = currentAnchor;
+                } else {
+                  currentSpan = document.createElement("span");
+                  if (cls) currentSpan.className = cls;
+                  textContainer.appendChild(currentSpan);
+                }
+                prevCls = cls;
+                prevHref = href;
+              }
+
+              currentSpan.textContent += ch;
+              await sleep(
+                parseInt(
+                  getComputedStyle(document.documentElement).getPropertyValue(
+                    "--char-delay",
+                  ),
+                ) || 45,
+                signal,
+              );
+            }
+
+            // Remove cursor from this line
+            if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
+
+            // Mark line as complete for screen readers
+            div.removeAttribute("aria-hidden");
+
+            // Activate links in this line
+            const links = div.querySelectorAll("a");
+            for (const link of links) {
+              link.classList.add("active");
+            }
+
+            // Pause between lines
+            if (i < content.lines.length - 1) {
+              await sleep(
+                parseInt(
+                  getComputedStyle(document.documentElement).getPropertyValue(
+                    "--line-delay",
+                  ),
+                ) || 300,
+                signal,
+              );
+            }
+          }
+
+          // Animation complete
+          animationDone = true;
+          isAnimating = false;
+          skipHint.classList.remove("visible");
+        } catch (e) {
+          if (e.name === "AbortError") {
+            // Animation was skipped or language switched
+            isAnimating = false;
+            return;
+          }
+          throw e;
+        }
+      }
+
+      // ── Skip Logic ────────────────────────────────
+      function skipAnimation() {
+        if (!isAnimating || animationDone) return;
+        if (abortController) abortController.abort();
+        renderComplete(currentLang);
+        isAnimating = false;
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") return; // preserve keyboard navigation
+        if (isAnimating && !animationDone) {
+          e.preventDefault();
+          skipAnimation();
+        }
+      });
+
+      document.addEventListener(
+        "click",
+        (e) => {
+          // Don't skip if clicking language toggle or an active link
+          if (
+            e.target.closest("#lang-toggle") ||
+            e.target.closest("a.active")
+          ) {
+            return;
+          }
+          if (isAnimating && !animationDone) {
+            skipAnimation();
+          }
+        },
+        true,
+      );
+
+      // ── Language Toggle ────────────────────────────
+      langToggle.addEventListener("click", () => {
+        const newLang = currentLang === "en" ? "zh" : "en";
+        if (animationDone) {
+          setLanguage(newLang);
+          renderComplete(newLang);
+        } else {
+          runTypewriter(newLang);
+        }
+      });
+
+      // ── Init ──────────────────────────────────────
+      setLanguage(currentLang);
+      runTypewriter(currentLang);
+    </script>
+  </body>
 </html>
